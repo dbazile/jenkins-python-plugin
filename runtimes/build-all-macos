@@ -1,0 +1,39 @@
+#!/bin/bash -e
+
+cd $(dirname $(readlink $0 || echo $0))  # Return to runtimes folder root
+
+################################################################################
+
+
+
+main() {
+	local started_at=$(date +%s)
+
+	if [[ "$(uname)" != "Darwin" ]]; then
+		echo "Error: cannot continue; host machine is not running MacOS"
+		exit 1
+	fi
+
+	echo -e "\nBuilding runtimes...\n"
+	for scriptfile in .macos/python-*.bash; do
+		"./$scriptfile"
+	done
+
+	cleanup
+
+	local finished_at=$(date +%s)
+	echo -e "\nDone (elapsed=$(( $finished_at - $started_at ))s)\n\nThe following items are now staged:\n"
+	ls -l .staging
+}
+
+
+cleanup() {
+	echo -e "\nCleaning up compilation workspace...\n"
+	rm -rf .macos/workspace
+}
+
+
+
+################################################################################
+
+main

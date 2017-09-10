@@ -1,0 +1,17 @@
+# IDE stuff
+.idea
+*.iml
+
+
+# Build artifacts
+/target
+/work
+
+
+# Runtime stuff
+/runtimes/.staging
+/runtimes/.macos/workspace
+
+
+# Misc
+.DS_Store

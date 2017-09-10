@@ -1,0 +1,16 @@
+#!/bin/bash -e
+
+cd $(dirname $(readlink $0 || echo $0))  # Return to runtimes folder root
+
+################################################################################
+
+
+
+s3_bucket=s3://${1##s3://}
+[[ "$s3_bucket" == "s3://" ]] && { echo "usage: $(basename $0) s3_bucket"; exit 1; }
+
+
+
+echo -e "\nDeploying runtimes to $s3_bucket...\n"
+
+aws s3 sync .staging $s3_bucket --delete

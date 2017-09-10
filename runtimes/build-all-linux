@@ -1,0 +1,58 @@
+#!/bin/bash -e
+
+cd $(dirname $(readlink $0 || echo $0))  # Return to runtimes folder root
+
+################################################################################
+
+
+
+main() {
+	local started_at=$(date +%s)
+
+	if ! which docker; then
+		echo "Error: cannot continue; docker was not found in your PATH"
+		exit 1
+	fi
+
+	echo -e "\nBuilding runtimes...\n"
+	for dockerfile in .linux/python-*.Dockerfile; do
+		build_runtime $dockerfile
+	done
+
+	cleanup
+
+	local finished_at=$(date +%s)
+	echo -e "\nDone (elapsed=$(( $finished_at - $started_at ))s)\n\nThe following items are now staged:\n"
+	ls -l .staging
+}
+
+
+build_runtime() {
+	local dockerfile=$1
+	local runtime=$(basename -s .Dockerfile "$dockerfile")
+	local tag="jpp-worker:$(basename $runtime)"
+
+	echo "  <<<  $tag started"
+	echo -e "\n================================================================================"
+	docker build -t $tag -f $dockerfile .
+	echo -e "================================================================================\n"
+
+	mkdir -p .staging
+
+	docker run --rm -v "$(pwd)/.staging:/output" $tag
+	echo "  >>>  $tag completed"
+}
+
+
+cleanup() {
+	local image_ids=$(docker images --filter 'reference=jpp-worker*' -q)
+
+	echo -e "\nCleaning up worker images...\n"
+	docker rmi $image_ids
+}
+
+
+
+################################################################################
+
+main

@@ -1,0 +1,15 @@
+---
+language: java
+cache: pip
+
+services:
+  - docker
+
+script:
+  - set -e
+  - mvn clean test
+
+after_success:
+  - sudo pip install awscli
+  - ./scripts/build-runtimes
+  - ./scripts/deploy-runtimes s3://bazile.dev.jenkins-python-plugin.runtimes
