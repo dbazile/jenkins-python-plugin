@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class PythonInstallation extends ToolInstallation implements EnvironmentSpecific<PythonInstallation>, NodeSpecific<PythonInstallation> {
+    private static final String DISPLAY_NAME = "Python";
 
     @DataBoundConstructor
     public PythonInstallation(@Nonnull String name, @Nonnull String home, List<? extends ToolProperty<?>> properties) {
@@ -47,7 +48,7 @@ public class PythonInstallation extends ToolInstallation implements EnvironmentS
 
         @Override
         public String getDisplayName() {
-            return "Python";
+            return DISPLAY_NAME;
         }
 
         @Override
@@ -58,12 +59,9 @@ public class PythonInstallation extends ToolInstallation implements EnvironmentS
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws hudson.model.Descriptor.FormException {
             boolean result = super.configure(req, json);
-            /*
-             * Invoked when the global configuration page is submitted. If
-             * installation are modified programmatically than it's a developer
-             * task perform the call to save method on this descriptor.
-             */
+
             save();
+
             return result;
         }
     }

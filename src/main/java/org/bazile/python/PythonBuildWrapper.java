@@ -24,32 +24,16 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
 
     @Override
     public void setUp(Context context, Run<?, ?> run, FilePath filePath, Launcher launcher, TaskListener taskListener, EnvVars environment) throws IOException, InterruptedException {
-        System.out.println("inside pbw setUp");
-
         Node node = Computer.currentComputer().getNode();
 
         PythonInstallation installation = getInstallation()
                 .forNode(node, taskListener)
                 .forEnvironment(environment);
 
-        String ldLibraryPath = Util.fixNull(installation.getHome()) + "/lib";
+        String pythonHome = Util.fixNull(installation.getHome());
 
-        if (environment.containsKey("LD_LIBRARY_PATH")) {
-            ldLibraryPath += ":" + environment.get("LD_LIBRARY_PATH");
-        }
-
-        context.env("LD_LIBRARY_PATH", ldLibraryPath);
-        context.env("XLD_LIBRARY_PATH", ldLibraryPath);
-        context.env("XLDX_LIBRARY_PATH", ldLibraryPath);
-        context.env("XLDX_LIBRAXRY_PATH", ldLibraryPath);
-        context.env("YO_WTFO", "dafuq");
-        environment.overrideAll(context.getEnv());
-
-        System.out.printf("\n\n----\nEnvironment:\n%s\n----\n\n", environment.toString());
-        System.out.printf("\n\n----\nContext Environment:\n%s\n----\n\n", context.getEnv());
-
-        System.out.println("TODO -- create virtualenv?");
-        System.out.println("TODO -- LD_LIBRARY_PATH?");
+        // HACK -- is there a recommended way to prepend a path?
+        context.env("PATH", String.format("%s/bin:%s", pythonHome, environment.get("PATH")));
     }
 
     private PythonInstallation getInstallation() {
@@ -82,5 +66,4 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
                     .getInstallations();
         }
     }
-
 }
