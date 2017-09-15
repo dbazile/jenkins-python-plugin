@@ -12,7 +12,7 @@ compile() {
 
 	local target_folder=$1
 
-	set -x
+	set -ex
 
 	./configure \
 		--prefix="$(pwd)/$target_folder" \
@@ -52,7 +52,6 @@ download_and_extract() {
 
 
 enter_source_folder() {
-	echo "$SOURCE_FOLDER"
 	cd "$SCRIPTS_ROOT/.macos/workspace/$SOURCE_FOLDER"
 }
 

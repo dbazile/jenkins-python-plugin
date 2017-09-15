@@ -21,7 +21,7 @@ print_message 'compiling'
 
 echo
 print_border
-	compile
+	compile $RUNTIME_NAME
 	install_pip $RUNTIME_NAME $PYTHON_EXECUTABLE $PIP_EXECUTABLE
 	package $RUNTIME_NAME
 print_border

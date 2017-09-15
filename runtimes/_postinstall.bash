@@ -1,22 +1,28 @@
 #!/bin/bash -e
 
+cd $(dirname $(readlink $0 || echo $0))
+
+
+TOOL_ROOT=$(pwd)
+
 
 main() {
 	fix_shebang
+	make_read_only
 }
 
 
 fix_shebang() {
 	echo "Rewriting shebangs to use absolute path to Python on this machine"
 
-	cd bin
+	cd "$TOOL_ROOT/bin"
 
 	if [ -f python3 ]; then
 		python_binary="python3"
 	elif [ -f python2 ]; then
 		python_binary="python2"
 	else
-		echo "Cannot find Python executable in $tool_root... Bailing"
+		echo "Cannot find Python executable in $(pwd)... Bailing"
 		exit 1
 	fi
 
@@ -25,9 +31,16 @@ fix_shebang() {
 			continue
 		fi
 
-		sed -i.bak "s|^#!.*|#!${tool_root}/${python_binary}|" "$f"
+		sed -i.bak "s|^#!.*|#!$(pwd)/${python_binary}|" "$f"
 		rm "$f.bak"
 	done
+
+	cd "$TOOL_ROOT"
+}
+
+
+make_read_only() {
+	chmod -R -w "$TOOL_ROOT"
 }
 
 

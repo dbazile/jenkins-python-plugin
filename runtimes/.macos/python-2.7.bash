@@ -21,9 +21,9 @@ print_message 'compiling'
 
 echo
 print_border
-	compile
+	compile $RUNTIME_NAME
 	install_pip $RUNTIME_NAME $PYTHON_EXECUTABLE $PIP_EXECUTABLE
-	"./$RUNTIME_NAME/bin/$pip_executable" install virtualenv
+	"./$RUNTIME_NAME/bin/$PIP_EXECUTABLE" install virtualenv
 	package $RUNTIME_NAME
 print_border
 echo
