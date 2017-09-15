@@ -104,11 +104,6 @@ package() {
 }
 
 
-return_to_root() {
-	cd "$SCRIPTS_ROOT"
-}
-
-
 print_border() {
 	echo "================================================================================"
 }
@@ -121,4 +116,61 @@ print_header() {
 
 print_message() {
 	echo -e "       $@"
+}
+
+
+return_to_root() {
+	cd "$SCRIPTS_ROOT"
+}
+
+
+# This is less than ideal, but with MacOS Sierra not shipping with OpenSSL
+# headers, this is the world we live in...
+setup_openssl_headers() {
+	enter_workspace
+
+	local url="https://www.openssl.org/source/old/0.9.x/openssl-0.9.8zh.tar.gz"
+	local filename=$(basename $url)
+	local file_hash="f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6"
+
+	print_message "preparing openssl headers"
+
+	if [ ! -f "$filename" ]; then
+		print_message "download $url"
+		curl -fs -O "$url" || { echo "  !!!  error: download failed "; exit 1; }
+
+		print_message "verifying hash"
+		shasum -a 256 -c <(echo "$file_hash  $filename") 1>/dev/null
+
+		print_message "extracting source tarball"
+		tar zxf "$filename"
+	fi
+
+	local openssl_source_abspath="$(pwd)/$(basename -s .tar.gz $filename)"
+	if [ ! -d "$openssl_source_abspath/include/openssl" ]; then
+		print_message "creating openssl header files at $openssl_source_abspath"
+
+		print_border
+		pushd $openssl_source_abspath >/dev/null
+
+		set -ex
+
+		./config --openssldir=/System/Library/OpenSSL
+
+		set +x
+
+		popd > /dev/null
+		print_border
+
+		echo
+	fi
+
+	export CFLAGS="-I$openssl_source_abspath/include"
+
+	return_to_root
+}
+
+
+teardown_openssl_headers() {
+	export CFLAGS=''
 }
