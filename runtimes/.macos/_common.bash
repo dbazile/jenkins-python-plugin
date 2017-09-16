@@ -91,6 +91,8 @@ install_pip() {
 }
 
 package() {
+	enter_source_folder
+
 	local runtime_name=$1
 
 	mkdir -p "$TARBALL_ROOT"
@@ -101,6 +103,8 @@ package() {
 	shasum -a 256 "$runtime_name.tar.gz" > "$runtime_name.tar.gz.shasum"
 
 	mv "$runtime_name.tar.gz" "$runtime_name.tar.gz.shasum" "$TARBALL_ROOT"
+
+	return_to_root
 }
 
 
