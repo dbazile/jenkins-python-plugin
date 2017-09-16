@@ -1,4 +1,4 @@
-package org.bazile.python;
+package org.bazile.jenkins.python;
 
 import hudson.Extension;
 import hudson.FilePath;
