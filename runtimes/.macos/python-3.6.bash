@@ -17,6 +17,8 @@ print_header "$RUNTIME_NAME: started"
 
 download_and_extract "$PYTHON_VERSION" "$SOURCE_SHASUM"
 
+setup_openssl_headers
+
 print_message 'compiling'
 
 echo
@@ -26,5 +28,7 @@ print_border
 	package $RUNTIME_NAME
 print_border
 echo
+
+teardown_openssl_headers
 
 print_header "$RUNTIME_NAME: completed"
