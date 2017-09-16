@@ -10,7 +10,7 @@
 
 # Runtime stuff
 /runtimes/.staging
-/runtimes/.macos/workspace
+/runtimes/.macos
 
 
 # Misc

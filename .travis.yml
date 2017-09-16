@@ -11,5 +11,6 @@ script:
 
 after_success:
   - sudo pip install awscli
-  - ./scripts/build-runtimes
-  - ./scripts/deploy-runtimes s3://bazile.dev.jenkins-python-plugin.runtimes
+  - ./runtimes/build-all-linux
+  - ./runtimes/build-all-macos
+  - ./runtimes/deploy-to-s3 bazile.jenkins.python

@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		tk-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV GPG_KEY 26DEA9D4613391EF3E25C9FF0A5B101836580288
-ENV PYTHON_VERSION 3.3.6
+ENV GPG_KEY C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF
+ENV PYTHON_VERSION 2.7.13
 
 RUN set -ex \
 	&& wget -q -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-$PYTHON_VERSION.tar.xz" \
@@ -30,26 +30,12 @@ RUN set -ex \
 	&& mkdir -p "/staging" \
 	&& ./configure \
 		--prefix="/staging/$RUNTIME_NAME" \
+		--with-ensurepip=install \
 	&& make \
 	&& make install
 
-################################################################################
-
-# Install pip
-#   (see https://github.com/docker-library/python/blob/d3c5f47b788adb96e69477dadfb0baca1d97f764/3.3/jessie/Dockerfile#L76-L85)
-
-ENV PYTHON_PIP_VERSION 9.0.1
-
-RUN set -ex; \
-	\
-	wget -O get-pip.py 'https://bootstrap.pypa.io/get-pip.py'; \
-	\
-	python get-pip.py \
-		--disable-pip-version-check \
-		--no-cache-dir \
-		"pip==$PYTHON_PIP_VERSION"
-
-################################################################################
+RUN set -ex \
+	&& "/staging/$RUNTIME_NAME/bin/pip" install virtualenv
 
 WORKDIR /staging
 
@@ -63,9 +49,8 @@ RUN set -ex \
 
 VOLUME /output
 
-ADD _postinstall.bash ./$RUNTIME_NAME/postinstall.bash
+ADD _postinstall.sh ./$RUNTIME_NAME/postinstall.sh
 RUN set -ex \
-	&& chmod +x ./$RUNTIME_NAME/postinstall.bash \
 	&& tar zcvf "$RUNTIME_NAME.tar.gz" "$RUNTIME_NAME" \
 	&& sha256sum "$RUNTIME_NAME.tar.gz" > "$RUNTIME_NAME.tar.gz.shasum"
 

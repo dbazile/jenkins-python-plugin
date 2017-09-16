@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		tk-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV GPG_KEY 0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D
-ENV PYTHON_VERSION 3.6.2
+ENV GPG_KEY 97FC712E4C024BBEA48A61ED3A5CA953F73C700D
+ENV PYTHON_VERSION 3.4.7
 
 RUN set -ex \
 	&& wget -q -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-$PYTHON_VERSION.tar.xz" \
@@ -46,9 +46,8 @@ RUN set -ex \
 
 VOLUME /output
 
-ADD _postinstall.bash ./$RUNTIME_NAME/postinstall.bash
+ADD _postinstall.sh ./$RUNTIME_NAME/postinstall.sh
 RUN set -ex \
-	&& chmod +x ./$RUNTIME_NAME/postinstall.bash \
 	&& tar zcvf "$RUNTIME_NAME.tar.gz" "$RUNTIME_NAME" \
 	&& sha256sum "$RUNTIME_NAME.tar.gz" > "$RUNTIME_NAME.tar.gz.shasum"
 

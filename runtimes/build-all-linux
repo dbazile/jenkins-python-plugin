@@ -1,58 +1,135 @@
-#!/bin/bash -e
+#!/usr/bin/env python3
 
-cd $(dirname $(readlink $0 || echo $0))  # Return to runtimes folder root
+import datetime
+import glob
+import os
+import subprocess
 
-################################################################################
+START_TIME     = datetime.datetime.now()
 
-
-
-main() {
-	local started_at=$(date +%s)
-
-	if ! which docker; then
-		echo "Error: cannot continue; docker was not found in your PATH"
-		exit 1
-	fi
-
-	echo -e "\nBuilding runtimes...\n"
-	for dockerfile in .linux/python-*.Dockerfile; do
-		build_runtime $dockerfile
-	done
-
-	cleanup
-
-	local finished_at=$(date +%s)
-	echo -e "\nDone (elapsed=$(( $finished_at - $started_at ))s)\n\nThe following items are now staged:\n"
-	ls -l .staging
-}
+SCRIPT_ROOT    = os.path.abspath(os.path.dirname(__file__))
+STAGING_ROOT   = os.path.join(SCRIPT_ROOT, '.staging')
+WORKSPACE_ROOT = os.path.join(SCRIPT_ROOT, '.linux')
 
 
-build_runtime() {
-	local dockerfile=$1
-	local runtime=$(basename -s .Dockerfile "$dockerfile")
-	local tag="jpp-worker:$(basename $runtime)"
+def main():
+    ensure_docker()
 
-	echo "  <<<  $tag started"
-	echo -e "\n================================================================================"
-	docker build -t $tag -f $dockerfile .
-	echo -e "================================================================================\n"
+    enter_script_root()
 
-	mkdir -p .staging
+    tags = []
+    for dockerfile in glob.glob(os.path.join(WORKSPACE_ROOT, '*.Dockerfile')):
+        tag = build_runtime(dockerfile)
+        tags.append(tag)
 
-	docker run --rm -v "$(pwd)/.staging:/output" $tag
-	echo "  >>>  $tag completed"
-}
+    cleanup(tags)
 
-
-cleanup() {
-	local image_ids=$(docker images --filter 'reference=jpp-worker*' -q)
-
-	echo -e "\nCleaning up worker images...\n"
-	docker rmi $image_ids
-}
+    print_message('all builds complete (count=%d, elapsed=%s)', len(tags), time_elapsed(), pad='both')
+    list_staged_files()
 
 
+def build_runtime(dockerfile: str):
+    tag = 'jpp-worker:{}'.format(to_tag(dockerfile))
 
-################################################################################
+    print_message('%s: started', tag, prefix='<<<', pad='both')
 
-main
+    execute_subprocess(SCRIPT_ROOT, [
+        'docker',
+        'build',
+        '-t',
+        tag,
+        '-f',
+        os.path.join(WORKSPACE_ROOT, dockerfile),
+        '.',
+    ])
+
+    package_runtime(tag)
+
+    print_message('%s: completed (elapsed: %s)', tag, time_elapsed(), prefix='>>>', pad='before')
+
+    return tag
+
+
+def cleanup(tags: list):
+    print_message('cleaning up worker images', pad='before')
+
+    execute_subprocess('.', [
+        'docker',
+        'images',
+        '--filter',
+        'reference=jpp-worker*',
+        '-q',
+    ])
+
+
+def ensure_docker():
+    try:
+        execute_subprocess(SCRIPT_ROOT, ['docker', '--version'])
+    except FileNotFoundError:
+        fail('cannot continue; docker was not found in your PATH')
+
+
+def enter_script_root():
+    os.chdir(SCRIPT_ROOT)
+
+
+def execute_subprocess(cwd: str, command_args: list, border: str = 'both'):
+    if border in ('before', 'both'):
+        print('=' * 80)
+
+    print('\033[31m+ {}\033[0m'.format(' '.join(command_args)))
+    exit_code = subprocess.call(args=command_args, cwd=cwd)
+    if exit_code != 0:
+        exit(exit_code)
+
+    if border in ('after', 'both'):
+        print('=' * 80)
+
+
+def fail(*args, **kwargs):
+    print_message(*args, **kwargs, prefix='!!!', pad='both')
+    exit(1)
+
+
+def list_staged_files():
+    execute_subprocess(SCRIPT_ROOT, ['du', '-ah', os.path.relpath(STAGING_ROOT, SCRIPT_ROOT)])
+
+
+def package_runtime(tag: str):
+    print_message('staging packaged runtime')
+
+    os.makedirs(STAGING_ROOT, exist_ok=True)
+
+    execute_subprocess(SCRIPT_ROOT, [
+        'docker',
+        'run',
+        '--rm',
+        '-v',
+        '{}:/output'.format(STAGING_ROOT),
+        tag,
+    ])
+
+
+def print_message(message: str, *components, pad: str= '', prefix: str = '   '):
+    if pad in ('before', 'both'):
+        print()
+
+    print('  {}  {}'.format(prefix, message % (components)))
+
+    if pad in ('after', 'both'):
+        print()
+
+
+def time_elapsed():
+    return str(datetime.datetime.now() - START_TIME)
+
+
+def to_tag(dockerfile: str):
+    return os.path.splitext(os.path.basename(dockerfile))[0]
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit(1)

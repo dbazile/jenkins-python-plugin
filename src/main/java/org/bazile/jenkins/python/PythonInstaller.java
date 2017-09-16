@@ -17,7 +17,7 @@ import java.util.List;
 public class PythonInstaller extends DownloadFromUrlInstaller {
     private static final String DISPLAY_NAME = "Install from S3";
     private static final String RUNTIME_URL = "http://s3.amazonaws.com/bazile.jenkins.python-plugin/python-{{version}}-{{platform}}.tar.gz";
-    private static final String POSTINSTALLER_SCRIPT = "postinstall.bash";
+    private static final String POSTINSTALLER_SCRIPT = "postinstall.sh";
     private static final String PLATFORM_UNKNOWN = "unknown";
 
     @DataBoundConstructor

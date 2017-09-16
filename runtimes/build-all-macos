@@ -1,39 +1,265 @@
-#!/bin/bash -e
+#!/usr/bin/env python3
 
-cd $(dirname $(readlink $0 || echo $0))  # Return to runtimes folder root
-
-################################################################################
-
-
-
-main() {
-	local started_at=$(date +%s)
-
-	if [[ "$(uname)" != "Darwin" ]]; then
-		echo "Error: cannot continue; host machine is not running MacOS"
-		exit 1
-	fi
-
-	echo -e "\nBuilding runtimes...\n"
-	for scriptfile in .macos/python-*.bash; do
-		"./$scriptfile"
-	done
-
-	cleanup
-
-	local finished_at=$(date +%s)
-	echo -e "\nDone (elapsed=$(( $finished_at - $started_at ))s)\n\nThe following items are now staged:\n"
-	ls -l .staging
-}
+import argparse
+import datetime
+import hashlib
+import os
+import re
+import shutil
+import subprocess
+import tarfile
+import urllib.request
 
 
-cleanup() {
-	echo -e "\nCleaning up compilation workspace...\n"
-	rm -rf .macos/workspace
-}
+START_TIME     = datetime.datetime.now()
+
+SCRIPT_ROOT    = os.path.abspath(os.path.dirname(__file__))
+STAGING_ROOT   = os.path.join(SCRIPT_ROOT, '.staging')
+WORKSPACE_ROOT = os.path.join(SCRIPT_ROOT, '.macos')
+
+PIP_VERSION    = '9.0.1'
+PIP_INSTALLER  = ('https://bootstrap.pypa.io/get-pip.py', '19dae841a150c86e2a09d475b5eb0602861f2a5b7761ec268049a662dbd2bd0c')
+OPENSSL_SOURCE = ('https://www.openssl.org/source/old/0.9.x/openssl-0.9.8zh.tar.gz', 'f1d9f3ed1b85a82ecf80d0e2d389e1fda3fca9a4dba0bf07adbf231e1a5e2fd6')
+PYTHON_SOURCES = [
+    ('https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz', 'a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1'),
+    ('https://www.python.org/ftp/python/3.3.6/Python-3.3.6.tgz', '0a58ad1f1def4ecc90b18b0c410a3a0e1a48cf7692c75d1f83d0af080e5d2034'),
+    ('https://www.python.org/ftp/python/3.4.7/Python-3.4.7.tgz', '1614734847fd07e2a1ab1c65ae841db2433f8b845f49b34b7b5cabcb1c3f491f'),
+    ('https://www.python.org/ftp/python/3.5.4/Python-3.5.4.tgz', '6ed87a8b6c758cc3299a8b433e8a9a9122054ad5bc8aad43299cff3a53d8ca44'),
+    ('https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tgz', '7919489310a5f17f7acbab64d731e46dca0702874840dadce8bd4b2b3b8e7a82'),
+]
 
 
+def main():
+    if os.uname().sysname != 'Darwin':
+        fail('error: cannot continue; host machine is not running MacOS')
 
-################################################################################
+    parser = argparse.ArgumentParser()
+    parser.add_argument('versions', nargs='*')
+    opts = parser.parse_args()
 
-main
+    enter_workspace_root()
+
+    openssl_include_path = prepare_openssl_headers()
+
+    for url, shasum in filter_sources(opts.versions):
+        build_runtime(url, shasum, openssl_include_path)
+
+    cleanup()
+
+    print_message('all builds complete (count=%d, elapsed=%s)', len(PYTHON_SOURCES), time_elapsed(), pad='both')
+    list_staged_files()
+
+
+def build_runtime(url: str, shasum: str, openssl_include_path: str):
+    runtime_name = to_runtime_name(url)
+
+    print_message('%s: started', runtime_name, prefix='<<<', pad='before')
+
+    workspace = download_and_extract(url, shasum)
+
+    print_message('compiling', pad='after')
+
+    major_version, minor_version, _ = to_version(url).split('.')
+
+    target_path = os.path.join(workspace, runtime_name)
+    python_bin = os.path.join(target_path, 'bin/python{}'.format(major_version))
+    pip_bin = os.path.join(target_path, 'bin/pip{}'.format(major_version))
+
+    execute_subprocess(workspace, [
+        './configure',
+        '--prefix={}'.format(target_path),
+        '--with-ensure-pip=install',
+        'CFLAGS=-I{}'.format(openssl_include_path),
+    ], border='before')
+
+    execute_subprocess(workspace, ['make'], border='')
+    execute_subprocess(workspace, ['make', 'install'], border='')
+
+    if not os.path.exists(pip_bin):
+        install_pip(workspace, python_bin)
+
+    if major_version == '2':
+        execute_subprocess(workspace, [pip_bin, 'install', 'virtualenv'], border='')
+
+    package_runtime(workspace, runtime_name)
+
+    print_message('%s: completed (elapsed=%s)', runtime_name, time_elapsed(), prefix='>>>')
+
+
+def cleanup():
+    print_message('cleaning up workspace')
+
+    shutil.rmtree(WORKSPACE_ROOT, ignore_errors=True)
+
+
+def download_and_extract(url: str, expected_shasum: str):
+    file_name = os.path.basename(url)
+
+    chunk_size = 4000
+
+    if not os.path.exists(file_name):
+        print_message('downloading %s', url)
+        with urllib.request.urlopen(url) as res:
+            with open(file_name, 'wb') as f:
+                for chunk in iter(lambda: res.read(chunk_size), b''):
+                    f.write(chunk)
+
+    print_message('verifying hash')
+    hash_buffer = hashlib.sha256()
+    with open(file_name, 'rb') as f:
+        for chunk in iter(lambda: f.read(chunk_size), b''):
+            hash_buffer.update(chunk)
+
+    actual_shasum = hash_buffer.hexdigest()
+    if actual_shasum != expected_shasum:
+        fail('hash mismatch\n\nexpected: %s\nactual:   %s', expected_shasum, actual_shasum)
+
+    print_message('extracting %s', file_name)
+
+    extracted_path = os.path.abspath(re.sub(r'\.(tar\.gz|tgz)$', '', file_name))
+
+    shutil.rmtree(extracted_path, ignore_errors=True)
+
+    with tarfile.open(file_name, 'r:gz') as f:
+        f.extractall()
+
+    return extracted_path
+
+
+def enter_workspace_root():
+    os.makedirs(WORKSPACE_ROOT, exist_ok=True)
+    os.chdir(WORKSPACE_ROOT)
+
+
+def execute_subprocess(cwd: str, command_args: list, border: str = 'both'):
+    if border in ('before', 'both'):
+        print('=' * 80)
+
+    print('\033[31m+ {}\033[0m'.format(' '.join(command_args)))
+    exit_code = subprocess.call(args=command_args, cwd=cwd)
+    if exit_code != 0:
+        exit(exit_code)
+
+    if border in ('after', 'both'):
+        print('=' * 80)
+
+
+def fail(*args, **kwargs):
+    print_message(*args, **kwargs, prefix='!!!', pad='both')
+    exit(1)
+
+
+def filter_sources(versions: list):
+    sources = []
+
+    for source in PYTHON_SOURCES:
+        if not versions or to_version(source[0]) in versions:
+            sources.append(source)
+
+    return sources
+
+
+def install_pip(workspace: str, python_bin: str):
+    url, expected_shasum = PIP_INSTALLER
+    installer_path = os.path.join(WORKSPACE_ROOT, os.path.basename(url))
+
+    # Refer to https://github.com/docker-library/python/blob/d3c5f47b788adb96e69477dadfb0baca1d97f764/3.3/jessie/Dockerfile#L76-L85)
+
+    if not os.path.exists(installer_path):
+        print_message('fetching pip installer from %s', url)
+        with urllib.request.urlopen(url) as res:
+            with open(installer_path, 'wb') as f:
+                installer_script_content = res.read()
+
+                actual_shasum = hashlib.sha256(installer_script_content).hexdigest()
+                if actual_shasum != expected_shasum:
+                    fail('hash mismatch\n\nexpected: %s\nactual:   %s', expected_shasum, actual_shasum)
+
+                f.write(installer_script_content)
+
+    print_message('installing pip %s', PIP_VERSION)
+    execute_subprocess(WORKSPACE_ROOT, [
+        python_bin,
+        installer_path,
+        '--disable-pip-version-check',
+        '--no-cache-dir',
+        'pip=={}'.format(PIP_VERSION),
+    ])
+
+
+def list_staged_files():
+    execute_subprocess(SCRIPT_ROOT, ['du', '-ah', os.path.relpath(STAGING_ROOT, SCRIPT_ROOT)])
+
+
+def package_runtime(workspace: str, runtime_name: str):
+    tarball_path = os.path.join(STAGING_ROOT, '{}.tar.gz'.format(runtime_name))
+    shasum_path = os.path.join(STAGING_ROOT, '{}.tar.gz.shasum'.format(runtime_name))
+    postinstaller_path = os.path.join(SCRIPT_ROOT, '_postinstall.sh')
+
+    os.makedirs(STAGING_ROOT, exist_ok=True)
+
+    runtime_path = os.path.join(workspace, runtime_name)
+    print_message('writing %s', os.path.basename(tarball_path))
+    with tarfile.open(tarball_path, 'w:gz', compresslevel=5) as f:
+        f.add(runtime_path, runtime_name)
+        f.add(postinstaller_path, '{}/postinstall.sh'.format(runtime_name))
+
+    print_message('writing %s', os.path.basename(shasum_path))
+    hash_buffer = hashlib.sha256()
+    with open(tarball_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(4000), b''):
+            hash_buffer.update(chunk)
+    with open(shasum_path, 'w') as f:
+        f.write('{}  {}'.format(hash_buffer.hexdigest(), os.path.basename(tarball_path)))
+
+    return tarball_path, shasum_path
+
+
+def prepare_openssl_headers():
+    if os.path.exists('/usr/include/openssl'):
+        return '/usr/include/openssl'
+
+    print_message('preparing openssl headers', prefix='---')
+
+    workspace = download_and_extract(*OPENSSL_SOURCE)
+
+    print_message('configuring', pad='after')
+
+    execute_subprocess(workspace, [
+        './config',
+        '--openssldir=/System/Library/OpenSSL',
+    ])
+
+    return os.path.join(workspace, 'include')
+
+
+def print_message(message: str, *components, pad: str= '', prefix: str = '   '):
+    if pad in ('before', 'both'):
+        print()
+
+    print('  {}  {}'.format(prefix, message % (components)))
+
+    if pad in ('after', 'both'):
+        print()
+
+
+def time_elapsed():
+    return str(datetime.datetime.now() - START_TIME)
+
+
+def to_runtime_name(url: str):
+    return 'python-{}-macos'.format(to_version(url))
+
+
+def to_version(url: str):
+    m = re.search(r'Python-(\d+\.\d+\.\d+)\.tgz', url)
+    if not m:
+        fail('could not parse version from URL')
+    return m.group(1)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit(1)

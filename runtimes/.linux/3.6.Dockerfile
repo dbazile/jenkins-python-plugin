@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		tk-dev \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV GPG_KEY C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF
-ENV PYTHON_VERSION 2.7.13
+ENV GPG_KEY 0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D
+ENV PYTHON_VERSION 3.6.2
 
 RUN set -ex \
 	&& wget -q -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-$PYTHON_VERSION.tar.xz" \
@@ -34,9 +34,6 @@ RUN set -ex \
 	&& make \
 	&& make install
 
-RUN set -ex \
-	&& "/staging/$RUNTIME_NAME/bin/pip" install virtualenv
-
 WORKDIR /staging
 
 RUN set -ex \
@@ -49,9 +46,8 @@ RUN set -ex \
 
 VOLUME /output
 
-ADD _postinstall.bash ./$RUNTIME_NAME/postinstall.bash
+ADD _postinstall.sh ./$RUNTIME_NAME/postinstall.sh
 RUN set -ex \
-	&& chmod +x ./$RUNTIME_NAME/postinstall.bash \
 	&& tar zcvf "$RUNTIME_NAME.tar.gz" "$RUNTIME_NAME" \
 	&& sha256sum "$RUNTIME_NAME.tar.gz" > "$RUNTIME_NAME.tar.gz.shasum"
 
