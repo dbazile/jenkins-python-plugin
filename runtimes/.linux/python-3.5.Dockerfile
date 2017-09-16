@@ -48,7 +48,7 @@ VOLUME /output
 
 ADD _postinstall.bash ./$RUNTIME_NAME/postinstall.bash
 RUN set -ex \
-	&& chmod +x postinstall.bash \
+	&& chmod +x ./$RUNTIME_NAME/postinstall.bash \
 	&& tar zcvf "$RUNTIME_NAME.tar.gz" "$RUNTIME_NAME" \
 	&& sha256sum "$RUNTIME_NAME.tar.gz" > "$RUNTIME_NAME.tar.gz.shasum"
 
