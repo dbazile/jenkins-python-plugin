@@ -11,8 +11,6 @@ import tarfile
 import urllib.request
 
 
-START_TIME     = datetime.datetime.now()
-
 SCRIPT_ROOT    = os.path.abspath(os.path.dirname(__file__))
 STAGING_ROOT   = os.path.join(SCRIPT_ROOT, '.staging')
 WORKSPACE_ROOT = os.path.join(SCRIPT_ROOT, '.macos')
@@ -243,8 +241,8 @@ def print_message(message: str, *components, pad: str= '', prefix: str = '   '):
         print()
 
 
-def time_elapsed():
-    return str(datetime.datetime.now() - START_TIME)
+def time_elapsed(start_time=datetime.datetime.now()):
+    return str(datetime.datetime.now() - start_time)
 
 
 def to_runtime_name(url: str):

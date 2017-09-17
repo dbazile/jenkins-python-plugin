@@ -6,8 +6,6 @@ import os
 import subprocess
 
 
-START_TIME        = datetime.datetime.now()
-
 STAGING_ROOT      = os.path.abspath(os.path.join(os.path.dirname(__file__), '.staging'))
 
 
@@ -22,9 +20,8 @@ def main():
 
     bucket_name = os.path.basename(opts.bucket)
 
-    print_message('preparing deployment to s3://%s', bucket_name, prefix='<<<', pad='before')
+    print_message('deploying to s3://%s', bucket_name, prefix='<<<', pad='both')
 
-    print_message('deploying', prefix='>>>', pad='after')
     deploy(bucket_name)
 
     print_message('all runtimes deployed (elapsed=%s)', time_elapsed(), prefix='>>>', pad='both')
@@ -80,8 +77,8 @@ def print_message(message: str, *components, pad: str= '', prefix: str = '   '):
         print()
 
 
-def time_elapsed():
-    return str(datetime.datetime.now() - START_TIME)
+def time_elapsed(start_time=datetime.datetime.now()):
+    return str(datetime.datetime.now() - start_time)
 
 
 if __name__ == '__main__':
