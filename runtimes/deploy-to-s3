@@ -2,23 +2,13 @@
 
 import argparse
 import datetime
-import glob
-import json
 import os
-import re
 import subprocess
 
 
 START_TIME        = datetime.datetime.now()
 
 STAGING_ROOT      = os.path.abspath(os.path.join(os.path.dirname(__file__), '.staging'))
-PATTERN_FILENAME  = re.compile(r'^python-(?P<version>\d+\.\d+\.\d+)-(?P<platform>[a-z]+)\.tar\.gz(?:\.shasum)?$''', re.I)
-
-ID_TEMPLATE       = '{version}-{platform}'
-NAME_TEMPLATE     = '{version}'
-MANIFEST_FILENAME = 'org.bazile.jenkins.python.PythonInstaller.json'
-MANIFEST_TEMPLATE = "downloadService.post('org.bazile.jenkins.python.PythonInstaller', {runtimes})\n"
-URL_TEMPLATE      = 'https://s3.amazonaws.com/{bucket}/{filename}'
 
 
 def main():
@@ -33,8 +23,6 @@ def main():
     bucket_name = os.path.basename(opts.bucket)
 
     print_message('preparing deployment to s3://%s', bucket_name, prefix='<<<', pad='before')
-
-    write_manifest(bucket_name)
 
     print_message('deploying', prefix='>>>', pad='after')
     deploy(bucket_name)
@@ -94,26 +82,6 @@ def print_message(message: str, *components, pad: str= '', prefix: str = '   '):
 
 def time_elapsed():
     return str(datetime.datetime.now() - START_TIME)
-
-
-def write_manifest(bucket: str):
-    runtimes = []
-    for filename in sorted(glob.glob('*.tar.gz'), reverse=True):
-        meta = PATTERN_FILENAME.match(filename).groupdict()
-
-        with open(filename + '.shasum') as f:
-            shasum = f.read().split()[0]
-
-        runtimes.append({
-            'id':     ID_TEMPLATE.format(**meta),
-            'name':   NAME_TEMPLATE.format(**meta),
-            'url':    URL_TEMPLATE.format(bucket=bucket, filename=filename),
-            'shasum': shasum,
-        })
-
-    print_message('writing %s', MANIFEST_FILENAME)
-    with open(MANIFEST_FILENAME, 'w') as f:
-        f.write(MANIFEST_TEMPLATE.format(runtimes=json.dumps(runtimes, indent=4)))
 
 
 if __name__ == '__main__':
