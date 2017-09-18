@@ -29,9 +29,12 @@ wherever, feel free to skip that step.
 From the terminal, run:
 
 ```bash
-./scripts/build-all-linux
-./scripts/build-all-macos  # if on MacOS
-./scripts/deploy-to-s3 my-custom-bucket
+./runtimes/build-all-linux
+
+# only if on MacOS
+./runtimes/build-all-macos
+
+./runtimes/deploy-to-s3 my-custom-bucket
 ```
 
 
