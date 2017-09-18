@@ -38,9 +38,12 @@ From the terminal, run:
 
 ## Reporting issues
 
-Compiling Python, though in the writing of this plugin I've done almost 100
-times now, is something that is new to me.  If you run into a problem, please
-file an issue.
+Compiling Python from source (though in the writing of this plugin I've done
+almost 1000 times over now) is something that is completely new to me.  If you
+run into a problem, it's likely due to some misconfiguration in the runtime
+compilers that I haven't bumped into yet in my testing.
+
+> TL;DR, please file issues if you run into any.
 
 
 
@@ -48,7 +51,7 @@ file an issue.
 
 ### In Python 3, `venv` folder cannot be overwritten
 
-If you're seeing this in your build logs:
+If you're seeing this in your build logs...
 
 ```
 + python3 -m venv venv
