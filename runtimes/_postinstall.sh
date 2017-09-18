@@ -23,7 +23,7 @@ cd "$RUNTIME_ROOT"
 echo -e "\nRewriting shebangs to $PYTHON_BIN...\n"
 
 for f in bin/*; do
-	if [[ "$(file --mime $f)" =~ "binary" ]]; then
+	if ! grep -Iq '^#!' "$f"; then
 		echo "       skip $f"
 		continue
 	fi
