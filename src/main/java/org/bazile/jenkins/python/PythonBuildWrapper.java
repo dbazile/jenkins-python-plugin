@@ -37,7 +37,7 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
     }
 
     private PythonInstallation getInstallation() {
-        for (PythonInstallation i : ((DescriptorImpl)getDescriptor()).getInstallations()) {
+        for (PythonInstallation i : ((DescriptorImpl) getDescriptor()).getInstallations()) {
             if (i.getName().equals(installationName)) {
                 return i;
             }
@@ -50,11 +50,6 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
     public static final class DescriptorImpl extends BuildWrapperDescriptor {
 
         @Override
-        public boolean isApplicable(AbstractProject<?, ?> item) {
-            return true;
-        }
-
-        @Override
         public String getDisplayName() {
             return "Set up Python virtual environment in workspace";
         }
@@ -64,6 +59,11 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
                     .getActiveInstance()
                     .getDescriptorByType(PythonInstallation.DescriptorImpl.class)
                     .getInstallations();
+        }
+
+        @Override
+        public boolean isApplicable(AbstractProject<?, ?> item) {
+            return true;
         }
     }
 }

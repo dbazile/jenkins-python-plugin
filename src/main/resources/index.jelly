@@ -1,4 +1,0 @@
-<?jelly escape-by-default='true'?>
-<div>
-    Python Plugin executes <a href="http://python.org/">Python</a> script as a build step.
-</div>

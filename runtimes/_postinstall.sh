@@ -35,6 +35,6 @@ done
 
 
 
-echo -e "\nMaking $RUNTIME_ROOT read-only...\n"
+echo -e "\nMaking $RUNTIME_ROOT immutable...\n"
 
 chmod -R -w "$RUNTIME_ROOT"
