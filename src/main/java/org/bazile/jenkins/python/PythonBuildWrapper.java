@@ -51,7 +51,7 @@ public class PythonBuildWrapper extends SimpleBuildWrapper {
 
         @Override
         public String getDisplayName() {
-            return "Set up Python virtual environment in workspace";
+            return Messages.SetUpPython();
         }
 
         public PythonInstallation[] getInstallations() {

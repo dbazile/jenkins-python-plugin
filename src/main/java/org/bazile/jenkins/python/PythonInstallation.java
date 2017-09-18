@@ -21,8 +21,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class PythonInstallation extends ToolInstallation implements EnvironmentSpecific<PythonInstallation>, NodeSpecific<PythonInstallation> {
-    private static final String DISPLAY_NAME = "Python";
-
     @DataBoundConstructor
     public PythonInstallation(@Nonnull String name, @Nonnull String home, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
@@ -48,7 +46,7 @@ public class PythonInstallation extends ToolInstallation implements EnvironmentS
 
         @Override
         public String getDisplayName() {
-            return DISPLAY_NAME;
+            return "Python";
         }
 
         @Override
