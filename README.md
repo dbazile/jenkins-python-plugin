@@ -1,27 +1,68 @@
 # jenkins-python-plugin
 
-## Using a custom runtime repository
 
-By default, this plugin downloads precompiled Python runtimes from `s3://bazile.dev.jenkins-python-plugin.runtimes`.  For security reasons, you might want tighter control over where the Python runtimes are actually coming from.
+## Building and using your own runtimes
+
+By default, this plugin downloads precompiled Python runtimes from
+`s3://bazile.jenkins.python`, an S3 bucket I created for this plugin.  In the
+interest of better security, you might want control over where the Python
+runtimes are actually coming from.
+
+For that you can compile your own runtimes using the scripts in
+[/runtimes](/runtimes) and use use the `Extract *.zip/*.tar.gz` installer and
+specify a URL to a precompiled Python runtime tarball that your build agents
+can reach.
+
+### 1. Install required utilities
 
 This requires:
 
-- AWS CLI
-- Docker
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [Docker](https://www.docker.com)
 
-### 1. In options, set custom repository
-
-Change the _Runtime Repository_ to `some-s3-bucket-that-i-control`
+If not already on your machine, you'll have to install the required items.  If
+you're not hosting the runtimes on S3 and are willing to manually deploy them
+wherever, feel free to skip that step.
 
 ### 2. Build and deploy custom runtimes
 
 From the terminal, run:
 
 ```bash
-./scripts/build-runtimes
-./scripts/build-runtimes-macos  # if on MacOS
-./scripts/deploy-runtimes my-custom-bucket
+./scripts/build-all-linux
+./scripts/build-all-macos  # if on MacOS
+./scripts/deploy-to-s3 my-custom-bucket
 ```
+
+
+
+## Reporting issues
+
+Compiling Python, though in the writing of this plugin I've done almost 100
+times now, is something that is new to me.  If you run into a problem, please
+file an issue.
+
+
+
+## Known issues
+
+### In Python 3, `venv` folder cannot be overwritten
+
+If you're seeing this in your build logs:
+
+```
++ python3 -m venv venv
+Error: [Errno 13] Permission denied: '/path/to/jenkinshome/workspace/foo/venv/bin/activate'
+```
+
+...it's because of the immutability of the tool installation.  When `venv`
+creates a virtual environment, it copies the files over, retaining whatever file
+permissions it had originally.
+
+The workaround for this is to either wipe away the workspace every build or test
+for the existence of `./venv` first.
+
+
 
 ## Acknowledgements
 

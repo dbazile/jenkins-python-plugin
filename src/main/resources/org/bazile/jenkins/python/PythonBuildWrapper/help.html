@@ -1,0 +1,31 @@
+Adds a Python installation with pip virtualenv/venv to the PATH of the build.
+
+<p>It is important to remember that the bare Python installation is immutable; you need to create a virtual environment if you'll <code>pip install</code> things.</p>
+
+<h3>Usage</h3>
+<p>In your build script, include something like the following:</p>
+<pre style="margin: 1em 2em; padding: 1.5em; border: 1px solid; box-shadow: 5px 5px; color: #b26; background-color: #ff9;">
+#
+# Python 3
+#
+
+python3 -m venv venv
+. venv/bin/activate
+
+python --version
+
+pip install -r requirements.txt
+
+
+
+#
+# Python 2
+#
+
+python2 -m virtualenv virtualenv
+. virtualenv/bin/activate
+
+python --version
+
+pip install -r requirements.txt
+</pre>
